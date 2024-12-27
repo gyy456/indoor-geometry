@@ -144,7 +144,7 @@ class Camera(nn.Module):
                     self.invdepthmap = self.invdepthmap * depth_params["scale"] + depth_params["offset"]  #统一尺度
 
 
-        self.invdepthmap = torch.from_numpy(self.invdepthmap[None]).to(self.data_device)
+            self.invdepthmap = torch.from_numpy(self.invdepthmap[None]).to(self.data_device)
 
 
 
