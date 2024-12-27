@@ -1,0 +1,138 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "make_depth_scale",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/utils/make_depth_scale.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--base_dir","dataset_liyi/train",
+        "--depths_dir","dataset_liyi/train/renders_depth",
+        // "--model_type", "bin",
+      ]
+    },
+    {
+      "name": "normal",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/normal.py",
+      "console": "integratedTerminal",
+      "args": [
+        "-s",
+        "dataset_liyi/train",
+        "-m",
+        "output_normal",
+        "--max_depth",
+        "4",
+        "--voxel_size",
+        "0.05",
+        "--skip_test",
+        // "--block_json_path",
+        // "a3_half/edge_0/block.json",
+      ]
+    },
+    {
+      "name": "render",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/render.py",
+      "console": "integratedTerminal",
+      "args": [
+        "-m",
+        "result/output_vast/00000",
+        "--max_depth",
+        "4",
+        "--voxel_size",
+        "0.05",
+        "--skip_test",
+        "--block_json_path",
+        "a3_half/edge_0/block.json",
+      ]
+    },
+    {
+      "name": "sam",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/sam.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "debug",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/train.py",
+      "console": "integratedTerminal",
+      "args": [
+        "-s",
+        "datasets",
+        "-m",
+        "output",
+      ]
+    },
+    {
+      "name": "train_partition",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/train_all_load.py",
+      "console": "integratedTerminal",
+      "args": [
+        "-s",
+        "dataset_liyi/train/",
+        "-m",
+        "result/output_liyi_addscale_dpt",
+        "--clients",
+        "1",
+        "--block_json_path",
+        "a3_half/edge_0/block.json",
+        "--depths",
+        "Ture",
+        "--resolution",
+        "2"
+      ]
+    },
+    {
+      "name": "merge",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/merge.py",
+      "console": "integratedTerminal",
+      "args": []
+    },
+    {
+      "name": "video",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/video.py",
+      "console": "integratedTerminal",
+      "args": []
+    },
+    {
+      "name": "depth_anything",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/depth_infer.py",
+      "console": "integratedTerminal",
+      "args": [
+        "-s",
+        "a3_half",
+        "-m",
+        "depth_images_delight"
+      ]
+    },
+    {
+      "name": "Delight",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/delight.py",
+      "console": "integratedTerminal",
+      "args": [
+        "-s",
+        "a3_half",
+        "-m",
+        "delight_images"
+      ]
+    }
+  ]
+}
