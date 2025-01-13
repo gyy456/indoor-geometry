@@ -1,10 +1,10 @@
-##prepare normal
+## prepare normal
 python normal.py -s <dataset_path>  -m <output_path> 
 
-##prepare depth
+## prepare depth
 python depth_infer.py -s <dataset_path> -m <output_path>
 
-##scale the depth
+## scale the depth
 python make_depth_scale.py --base_dir <dataset_path> --depth_dir <depth_dir>
 
 ## start train
