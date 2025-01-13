@@ -62,16 +62,21 @@ def post_process_mesh(mesh, cluster_to_keep=1):
     print("num vertices post {}".format(len(mesh_0.vertices)))
     return mesh_0
 
-def render_set(model_path, name, dataset,iteration, train_cameras_list, scene, gaussians, pipeline,
-               app_model=None, max_depth=5.0, volume=None, use_depth_filter=False):
-    gts_path = os.path.join(model_path, name, "ours_{}".format(iteration), "gt")
-    render_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders")
-    render_depth_path = os.path.join(model_path, name, "ours_{}".format(iteration), "delight")
-    render_normal_path = os.path.join(model_path, name, "ours_{}".format(iteration), "renders_normal")
 
-    makedirs(gts_path, exist_ok=True)
-    makedirs(render_path, exist_ok=True)
-    makedirs(render_depth_path, exist_ok=True)
+def get_sorted_images(folder_path):
+    # 获取所有.jpg文件的路径
+    images_path = [os.path.join(folder_path, img) for img in os.listdir(folder_path) if img.endswith(".jpg")]
+    images_name = [img for img in os.listdir(folder_path) if img.endswith(".jpg")]
+    # 按文件名排序（假设文件名格式为000001.jpg, 000002.jpg, ...）
+    # images.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+    
+    return images_path, images_name
+
+def render_set(model_path, name, dataset, images_path, images_name ,gaussians, pipeline,
+               app_model=None, max_depth=5.0, volume=None, use_depth_filter=False):
+
+    render_normal_path = os.path.join(model_path, name, "stablenormal", "renders_normal")
+
     makedirs(render_normal_path, exist_ok=True)
         # Create predictor instance
     predictor = torch.hub.load("Stable-X/StableNormal", "StableNormal", trust_repo=True)
@@ -88,30 +93,32 @@ def render_set(model_path, name, dataset,iteration, train_cameras_list, scene, g
     # depth = model.infer_image(raw_img) # HxW raw depth map
 
 
-
+    
     depths_tsdf_fusion = []
-    for idx, view in enumerate(tqdm(train_cameras_list, desc="Rendering progress")):
-        view = cameraList_from_camInfos(train_cameras_list[idx:idx+1], 1.0, dataset)[0]
+    for idx, path in enumerate(tqdm(images_path, desc="Rendering progress")):
+        
         # Apply the model to the image
 
-        input_image = Image.open(view.image_path)
+        input_image = Image.open(path)
         normal_image = predictor(input_image)
 
         # Save or display the result
-        normal_image.save(os.path.join(render_normal_path, view.image_name + ".jpg"))
+        normal_image.save(os.path.join(render_normal_path, images_name[idx]))
 
         
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool,
                  max_depth : float, voxel_size : float, num_cluster: int, use_depth_filter : bool):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree)
-        scene = Scene_test(dataset, gaussians, shuffle=False, partiton=False)
+        # scene = Scene_test(dataset, gaussians, shuffle=False, partiton=False)
         # app_model = AppModel()
         # app_model.load_weights(scene.model_path)
         # app_model.eval()
         # app_model.cuda()
+
+        images_path, images_name = get_sorted_images(dataset.source_path)
         if not skip_train:
-            render_set(dataset.model_path, "train", dataset, scene.loaded_iter, scene.train_cameras_list, scene, gaussians, pipeline, 
+            render_set(dataset.model_path, "train", dataset, images_path, images_name, gaussians, pipeline, 
                        max_depth=max_depth,use_depth_filter=use_depth_filter)
 
 

@@ -207,7 +207,8 @@ def training(dataset, opt, pipe,  testing_iterations, saving_iterations, checkpo
         # depth_gt = 1/depth_gt
         # midas_depth = depth_gt.reshape(-1, 1)
         # depth_gt = midas_depth
-        depth_l1_weight = get_expon_lr_func(opt.depth_l1_weight_init, opt.depth_l1_weight_final, max_steps=opt.iterations)
+        depth_l1_weight = get_expon_lr_func(opt.depth_l1_weight_init, opt.depth_l1_weight_final, max_steps=30000)
+        # normal_l1_weight = get_expon_lr_func(0.08, 0, max_steps=30000)
         # if iteration > 0:
         #     loss_hard = 0
         #     render_pkg = render_for_depth(viewpoint_cam, gaussians, pipe, bg, app_model=app_model,

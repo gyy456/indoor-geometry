@@ -33,7 +33,7 @@ def render_normal(viewpoint_cam, depth, offset=None, normal=None, scale=1):
     return normal_ref
 
 def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, 
-           app_model: AppModel=None, return_plane = True, return_depth_normal = True):
+           app_model: AppModel=None, return_plane = True, return_depth_normal = True, use_trained_exp=False):
     """
     Render the scene. 
     
@@ -126,6 +126,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             appear_ab = app_model.appear_ab[torch.tensor(viewpoint_camera.uid).cuda()]
             app_image = torch.exp(appear_ab[0]) * rendered_image + appear_ab[1]
             return_dict.update({"app_image": app_image})
+        if use_trained_exp:
+            exposure = pc.get_exposure_from_name(viewpoint_camera.image_name)
+            rendered_image = torch.matmul(rendered_image.permute(1, 2, 0), exposure[:3, :3]).permute(2, 0, 1) + exposure[:3, 3,   None, None]
+        
         return return_dict
 
     global_normal = pc.get_normal(viewpoint_camera)
@@ -154,11 +158,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     rendered_alpha = out_all_map[3:4, ]
     rendered_distance = out_all_map[4:5, ]
     median_depth = out_all_map[6:7, ]
-    # rendered_alpha
-    
 
-
-    
     return_dict =  {"render": rendered_image,
                     "viewspace_points": screenspace_points,
                     "viewspace_points_abs": screenspace_points_abs,

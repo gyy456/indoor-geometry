@@ -8,8 +8,8 @@
       "program": "${workspaceFolder}/utils/make_depth_scale.py",
       "console": "integratedTerminal",
       "args": [
-        "--base_dir","dataset_liyi/train",
-        "--depths_dir","dataset_liyi/train/renders_depth",
+        "--base_dir","datasets_yupeng/train",
+        "--depths_dir","datasets_yupeng/train/renders_depth",
         // "--model_type", "bin",
       ]
     },
@@ -79,17 +79,17 @@
       "console": "integratedTerminal",
       "args": [
         "-s",
-        "dataset_liyi/train/",
+        "datasets_yupeng/train/",
         "-m",
-        "result/output_liyi_addscale_dpt",
+        "result/output_yp",
         "--clients",
         "1",
         "--block_json_path",
         "a3_half/edge_0/block.json",
         "--depths",
         "Ture",
-        "--resolution",
-        "2"
+        "--iterations",
+        "30000"
       ]
     },
     {

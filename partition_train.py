@@ -125,7 +125,7 @@ def prepare_output_and_logger(args):
 
 
 
-def training(dataset, opt, pipe, model_dpt, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
+def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)
     # backup main code
@@ -199,26 +199,12 @@ def training(dataset, opt, pipe, model_dpt, testing_iterations, saving_iteration
 
         bg = torch.rand((3), device="cuda") if opt.random_background else background
 
-        depth_gt = model_dpt.infer_image(cv2.imread(viewpoint_cam.image_path))
 
-        depth_gt = torch.tensor(depth_gt,device="cuda")
-        depth_gt = 1/depth_gt
         # midas_depth = depth_gt.reshape(-1, 1)
         # depth_gt = midas_depth
-        depth_l1_weight = get_expon_lr_func(opt.depth_l1_weight_init, opt.depth_l1_weight_final, max_steps=opt.iterations)
-        # if iteration > 0:
-        #     loss_hard = 0
-        #     render_pkg = render_for_depth(viewpoint_cam, gaussians, pipe, bg, app_model=app_model,
-        #                     return_plane=True, return_depth_normal=True)
-        #     depth = render_pkg['plane_depth']
-        #     loss_l2_dpt = patch_norm_mse_loss(depth[None,...], depth_gt[None,...].unsqueeze(0), randint(patch_range[0], patch_range[1]), opt.error_tolerance)
-        #     loss_hard += 0.1 * loss_l2_dpt
+        depth_l1_weight = get_expon_lr_func(opt.depth_l1_weight_init, opt.depth_l1_weight_final, max_steps=30000)
+        normal_l1_weight = get_expon_lr_func(0.08, 0, max_steps=30000)
 
-        #     loss_global = patch_norm_mse_loss_global(depth[None,...], depth_gt[None,...].unsqueeze(0), randint(patch_range[0], patch_range[1]), opt.error_tolerance)
-        #     loss_hard += 1 * loss_global
-        #     loss_hard.backward()
-        #     gaussians.optimizer.step()
-        #     gaussians.optimizer.zero_grad(set_to_none = True)
 
 
         render_pkg = render(viewpoint_cam, gaussians, pipe, bg, app_model=app_model,
@@ -226,17 +212,6 @@ def training(dataset, opt, pipe, model_dpt, testing_iterations, saving_iteration
         image, viewspace_point_tensor, visibility_filter, radii = \
             render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
         
-
-
-        Ll1depth_pure = 0.0
-        if depth_l1_weight(iteration) > 0 and viewpoint_cam.depth_reliable:
-            invDepth = render_pkg['plane_depth']
-            mono_invdepth = viewpoint_cam.invdepthmap.cuda()
-            # depth_mask = viewpoint_cam.depth_mask.cuda()
-
-            Ll1depth_pure = torch.abs((invDepth  - mono_invdepth) ).mean()
-            Ll1depth = depth_l1_weight(iteration) * Ll1depth_pure 
-            loss += Ll1depth
 
 
 
@@ -250,6 +225,18 @@ def training(dataset, opt, pipe, model_dpt, testing_iterations, saving_iteration
         image_loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * ssim_loss
         loss = image_loss.clone()
         
+
+
+
+        Ll1depth_pure = 0.0
+        if depth_l1_weight(iteration) > 0 and viewpoint_cam.depth_reliable:
+            invDepth = 1/render_pkg['plane_depth']
+            mono_invdepth = viewpoint_cam.invdepthmap.cuda()
+            # depth_mask = viewpoint_cam.depth_mask.cuda()
+
+            Ll1depth_pure = torch.abs((invDepth  - mono_invdepth) ).mean()
+            Ll1depth = depth_l1_weight(iteration) * Ll1depth_pure 
+            loss += Ll1depth
         
         rendered_distance = render_pkg['rendered_distance'].reshape(-1, 1)
 
@@ -679,7 +666,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
         torch.cuda.empty_cache()
 
 
-def parallel_local_training(gpu_id, client_index, lp_args, op_args, pp_args, model_dpt, test_iterations, save_iterations, checkpoint_iterations,
+def parallel_local_training(gpu_id, client_index, lp_args, op_args, pp_args,  test_iterations, save_iterations, checkpoint_iterations,
                             start_checkpoint, debug_from):
     torch.cuda.set_device(gpu_id)
     
@@ -687,7 +674,7 @@ def parallel_local_training(gpu_id, client_index, lp_args, op_args, pp_args, mod
     client_model_path = f"{model_path}/{client_index:05d}"
     lp_args.model_path = client_model_path
 
-    training(lp_args, op_args, pp_args, model_dpt, test_iterations, save_iterations, checkpoint_iterations,start_checkpoint, debug_from)
+    training(lp_args, op_args, pp_args, test_iterations, save_iterations, checkpoint_iterations,start_checkpoint, debug_from)
     # training(lp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from)
 
 def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs, app_model):
@@ -731,10 +718,10 @@ if __name__ == "__main__":
     print(f'Found {cuda_devices} CUDA devices')
     trainin_round = args.clients // cuda_devices
 
-    model_dpt = DepthAnythingV2(encoder='vitl', features=256, out_channels=[256, 512, 1024, 1024])
-    model_dpt.load_state_dict(torch.load('checkpoints/depth_anything_v2_vitl.pth', map_location='cuda'))
-    model_dpt.to('cuda')
-    model_dpt.eval()
+    # model_dpt = DepthAnythingV2(encoder='vitl', features=256, out_channels=[256, 512, 1024, 1024])
+    # model_dpt.load_state_dict(torch.load('checkpoints/depth_anything_v2_vitl.pth', map_location='cuda'))
+    # model_dpt.to('cuda')
+    # model_dpt.eval()
 
 
     for i in range(trainin_round):
@@ -745,7 +732,7 @@ if __name__ == "__main__":
             #     continue
             client_index = client_pool[index]
             p = Process(target=parallel_local_training, name=f"Client_{client_index}",
-                        args=(device_id, client_index, lp.extract(args), op.extract(args), pp.extract(args), model_dpt,
+                        args=(device_id, client_index, lp.extract(args), op.extract(args), pp.extract(args), 
                               args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from))
             process.append(p)
             p.start()
